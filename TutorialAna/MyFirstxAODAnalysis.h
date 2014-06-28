@@ -1,5 +1,5 @@
-#ifndef MyAnalysis_MyFirstxAODAnalysis_H
-#define MyAnalysis_MyFirstxAODAnalysis_H
+#ifndef TutorialAna_MyFirstxAODAnalysis_H
+#define TutorialAna_MyFirstxAODAnalysis_H
 
 #include <EventLoop/Algorithm.h>
 
