@@ -39,7 +39,5 @@ void ATestRun (const std::string& submitDir)
   EL::DirectDriver driver;
 
   // Process the job using the driver
-  if(driver.submit(job, submitDir) != EL::StatusCode::SUCCESS){
-    std::cout << "Driver submit was not successful" << std::endl;
-  }
+  driver.submit(job, submitDir);
 }
