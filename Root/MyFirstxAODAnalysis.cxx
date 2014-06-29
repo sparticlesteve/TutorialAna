@@ -1,6 +1,7 @@
 #include <EventLoop/Job.h>
 #include <EventLoop/StatusCode.h>
 #include <EventLoop/Worker.h>
+#include <EventLoop/OutputStream.h>
 #include <TutorialAna/MyFirstxAODAnalysis.h>
 
 // EDM includes
@@ -39,6 +40,10 @@ EL::StatusCode MyFirstxAODAnalysis :: setupJob (EL::Job& job)
 
   // Initialize the algo to use xAODRootAccess
   xAOD::Init("MyFirstxAODAnalysis").ignore();
+
+  // Output stream
+  EL::OutputStream out("outputLabel");
+  job.outputAdd(out);
 
   return EL::StatusCode::SUCCESS;
 }
@@ -93,6 +98,10 @@ EL::StatusCode MyFirstxAODAnalysis :: initialize ()
   m_jetCleaning->msg().setLevel(MSG::DEBUG);
   m_jetCleaning->setProperty("CutLevel", "MediumBad");
   m_jetCleaning->initialize();
+
+  // Output xAOD
+  TFile* file = wk()->getOutputFile("outputLabel");
+  m_event->writeTo(file);
 
   m_eventCounter = 0;
   m_numCleanEvents = 0;
@@ -155,6 +164,12 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
     Info("execute()", "  jet pt = %.2f GeV", (*jetItr)->pt() * 0.001);
   }
 
+  // Copy full container to output
+  m_event->copy("AntiKt4LCTopoJets");
+
+  // Save the event
+  m_event->fill();
+
   return EL::StatusCode::SUCCESS;
 }
 
@@ -186,6 +201,10 @@ EL::StatusCode MyFirstxAODAnalysis :: finalize ()
     delete m_jetCleaning;
     m_jetCleaning = 0;
   }
+
+  // Finalize and close our output xAOD file
+  TFile* file = wk()->getOutputFile("outputLabel");
+  m_event->finishWritingTo(file);
 
   Info("finalize()", "Number of clean events = %i", m_numCleanEvents);
 
