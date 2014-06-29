@@ -5,6 +5,9 @@
 
 // EDM includes
 #include "xAODEventInfo/EventInfo.h"
+#include "xAODJet/JetContainer.h"
+
+#include "JetSelectorTools/JetCleaningTool.h"
 
 // this is needed to distribute the algorithm to the workers
 ClassImp(MyFirstxAODAnalysis)
@@ -82,8 +85,17 @@ EL::StatusCode MyFirstxAODAnalysis :: initialize ()
   // doesn't get called if no events are processed.  So any objects
   // you create here won't be available in the output if you have no
   // input events.
+
   m_event = wk()->xaodEvent();
+
+  // Initialize and configure jet tool
+  m_jetCleaning = new JetCleaningTool("JetCleaning");
+  m_jetCleaning->msg().setLevel(MSG::DEBUG);
+  m_jetCleaning->setProperty("CutLevel", "MediumBad");
+  m_jetCleaning->initialize();
+
   m_eventCounter = 0;
+  m_numCleanEvents = 0;
 
   Info("initialize()", "Number of events = %lli", m_event->getEntries());
 
@@ -116,6 +128,33 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
     isMC = true;
   }
 
+  // Apply some event cleaning
+  if(!isMC){
+    if(eventInfo->eventFlags(xAOD::EventInfo::LAr)==2 ||
+       eventInfo->eventFlags(xAOD::EventInfo::Tile)==2 ||
+       eventInfo->eventFlags(xAOD::EventInfo::Core)!=0){
+      return EL::StatusCode::SUCCESS;
+    }
+  }
+  m_numCleanEvents++;
+
+  // Get ejt container
+  const xAOD::JetContainer* jets = 0;
+  if(!m_event->retrieve(jets, "AntiKt4LCTopoJets").isSuccess()){
+    Error("execute()", "Failed to retrieve AntiKt4LCTopoJets container");
+    return EL::StatusCode::FAILURE;
+  }
+  Info("execute()", " number of jets = %lu", jets->size());
+
+  // Loop over jets in the container
+  int numGoodJets = 0;
+  xAOD::JetContainer::const_iterator jetItr;
+  for(jetItr = jets->begin(); jetItr != jets->end(); ++jetItr){
+    if(!m_jetCleaning->accept(**jetItr)) continue;
+    numGoodJets++;
+    Info("execute()", "  jet pt = %.2f GeV", (*jetItr)->pt() * 0.001);
+  }
+
   return EL::StatusCode::SUCCESS;
 }
 
@@ -142,6 +181,14 @@ EL::StatusCode MyFirstxAODAnalysis :: finalize ()
   // submission node after all your histogram outputs have been
   // merged.  This is different from histFinalize() in that it only
   // gets called on worker nodes that processed input events.
+
+  if(m_jetCleaning){
+    delete m_jetCleaning;
+    m_jetCleaning = 0;
+  }
+
+  Info("finalize()", "Number of clean events = %i", m_numCleanEvents);
+
   return EL::StatusCode::SUCCESS;
 }
 

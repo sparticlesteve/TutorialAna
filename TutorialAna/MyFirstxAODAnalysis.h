@@ -7,25 +7,37 @@
 #include "xAODRootAccess/Init.h"
 #include "xAODRootAccess/TEvent.h"
 
+class JetCleaningTool;
+
 class MyFirstxAODAnalysis : public EL::Algorithm
 {
+
+public:
   // put your configuration variables here as public variables.
   // that way they can be set directly from CINT and python.
-public:
+
   // float cutValue;
 
-
-
+public:
   // variables that don't get filled at submission time should be
   // protected from being send from the submission node to the worker
   // node (done by the //!)
-public:
+
   // Tree *myTree; //!
   // TH1 *myHist; //!
 
-  xAOD::TEvent* m_event; //!
-  int m_eventCounter; //!
+protected:
 
+  xAOD::TEvent* m_event; //!
+
+  #ifndef __CINT__
+  JetCleaningTool* m_jetCleaning; //!
+  #endif
+
+  int m_eventCounter; //!
+  int m_numCleanEvents; //!
+
+public:
   // this is a standard constructor
   MyFirstxAODAnalysis ();
 
