@@ -4,4 +4,4 @@
 
 
 #root -l 'ATestRun.cxx ("submitDir")'
-testRun submitDir
+valgrind testRun submitDir

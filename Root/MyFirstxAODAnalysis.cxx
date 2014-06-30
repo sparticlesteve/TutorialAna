@@ -7,6 +7,7 @@
 // EDM includes
 #include "xAODEventInfo/EventInfo.h"
 #include "xAODJet/JetContainer.h"
+#include "xAODJet/JetAuxContainer.h"
 
 #include "JetSelectorTools/JetCleaningTool.h"
 
@@ -147,13 +148,18 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
   }
   m_numCleanEvents++;
 
-  // Get ejt container
+  // Get input jet container
   const xAOD::JetContainer* jets = 0;
   if(!m_event->retrieve(jets, "AntiKt4LCTopoJets").isSuccess()){
     Error("execute()", "Failed to retrieve AntiKt4LCTopoJets container");
     return EL::StatusCode::FAILURE;
   }
   Info("execute()", " number of jets = %lu", jets->size());
+
+  // Create the output container and its aux store
+  xAOD::JetContainer* goodJets = new xAOD::JetContainer();
+  xAOD::JetAuxContainer* goodJetsAux = new xAOD::JetAuxContainer();
+  goodJets->setStore(goodJetsAux);
 
   // Loop over jets in the container
   int numGoodJets = 0;
@@ -162,10 +168,23 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
     if(!m_jetCleaning->accept(**jetItr)) continue;
     numGoodJets++;
     Info("execute()", "  jet pt = %.2f GeV", (*jetItr)->pt() * 0.001);
+
+    // Copy this jet to the output container
+    xAOD::Jet* jet = new xAOD::Jet();
+    jet->makePrivateStore(**jetItr);
+    goodJets->push_back(jet);
   }
 
-  // Copy full container to output
+  // Copy full jet container to output
   m_event->copy("AntiKt4LCTopoJets");
+
+  // Record the good jets int the output
+  if(!m_event->record(goodJets, "GoodJets")){
+    Error("execute()", "record good jets failed");
+  }
+  if(!m_event->record(goodJetsAux, "GoodJetsAux.")){
+    Error("execute()", "record good jets aux failed");
+  }
 
   // Save the event
   m_event->fill();
