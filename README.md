@@ -22,3 +22,5 @@ Setting up the release:
     rcSetup Base,2.0.3
     rc find_packages
     rc compile
+
+To run the executable, see the script at run/run.sh
