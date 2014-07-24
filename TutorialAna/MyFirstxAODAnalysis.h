@@ -7,6 +7,8 @@
 #include "xAODRootAccess/Init.h"
 #include "xAODRootAccess/TEvent.h"
 
+#include "TH1.h"
+
 class JetCleaningTool;
 
 class MyFirstxAODAnalysis : public EL::Algorithm
@@ -27,7 +29,6 @@ public:
   // TH1 *myHist; //!
 
 protected:
-
   xAOD::TEvent* m_event; //!
 
   #ifndef __CINT__
@@ -36,6 +37,8 @@ protected:
 
   int m_eventCounter; //!
   int m_numCleanEvents; //!
+
+  TH1* h_jetPt; //!
 
 public:
   // this is a standard constructor

@@ -4,12 +4,13 @@
 #include <EventLoop/OutputStream.h>
 #include <TutorialAna/MyFirstxAODAnalysis.h>
 
+#include "JetSelectorTools/JetCleaningTool.h"
+
 // EDM includes
 #include "xAODEventInfo/EventInfo.h"
 #include "xAODJet/JetContainer.h"
 #include "xAODJet/JetAuxContainer.h"
 
-#include "JetSelectorTools/JetCleaningTool.h"
 
 // this is needed to distribute the algorithm to the workers
 ClassImp(MyFirstxAODAnalysis)
@@ -57,6 +58,10 @@ EL::StatusCode MyFirstxAODAnalysis :: histInitialize ()
   // beginning on each worker node, e.g. create histograms and output
   // trees.  This method gets called before any input files are
   // connected.
+
+  h_jetPt = new TH1F("h_jetPt", "h_jetPt", 100, 0, 500);
+  wk()->addOutput(h_jetPt);
+
   return EL::StatusCode::SUCCESS;
 }
 
@@ -169,16 +174,21 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
     numGoodJets++;
     Info("execute()", "  jet pt = %.2f GeV", (*jetItr)->pt() * 0.001);
 
+    // Fill histogram
+    h_jetPt->Fill(((*jetItr)->pt())*.001);
+
     // Copy this jet to the output container
     xAOD::Jet* jet = new xAOD::Jet();
     jet->makePrivateStore(**jetItr);
     goodJets->push_back(jet);
   }
 
+  Info("execute()", "numGoodJets = %i", numGoodJets);
+
   // Copy full jet container to output
   m_event->copy("AntiKt4LCTopoJets");
 
-  // Record the good jets int the output
+  // Record the good jets into the output
   if(!m_event->record(goodJets, "GoodJets")){
     Error("execute()", "record good jets failed");
   }

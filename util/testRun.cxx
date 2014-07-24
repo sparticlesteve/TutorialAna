@@ -1,5 +1,6 @@
 #include "xAODRootAccess/Init.h"
 #include "SampleHandler/SampleHandler.h"
+#include "SampleHandler/DiskListLocal.h"
 #include "SampleHandler/ToolsDiscovery.h"
 #include "EventLoop/Job.h"
 #include "EventLoop/DirectDriver.h"
@@ -18,10 +19,13 @@ int main(int argc, char* argv[])
   // Create a new sample handler to describe the data files we use
   SH::SampleHandler sh;
 
-  // Scan for datasets in the given directory
-  SH::scanDir (sh, "/afs/cern.ch/atlas/project/PAT/xAODs/r5534/");
+  // Scan for datasets in the given directory on lxplus
+  //SH::scanDir (sh, "/afs/cern.ch/atlas/project/PAT/xAODs/r5534/");
   // or for data
   //SH::scanDir (sh, "/afs/cern.ch/atlas/project/PAT/xAODs/24.04.2014/");
+  // Set input file path on PDSF
+  SH::DiskListLocal list("/eliza18/atlas/atlasdata/atlaslocalgroupdisk/rucio/valid2/4c/15/");
+  SH::scanFiles(sh, list);
 
   // Set the name of the tree in our files
   sh.setMetaString ("nc_tree", "CollectionTree");
