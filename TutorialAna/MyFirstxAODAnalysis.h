@@ -39,6 +39,7 @@ protected:
   int m_numCleanEvents; //!
 
   TH1* h_jetPt; //!
+  TH1* h_mJJ; //!
 
 public:
   // this is a standard constructor

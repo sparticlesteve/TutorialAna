@@ -8,6 +8,10 @@
 
 // EDM includes
 #include "xAODEventInfo/EventInfo.h"
+#include "xAODEgamma/ElectronContainer.h"
+#include "xAODEgamma/ElectronAuxContainer.h"
+#include "xAODMuon/MuonContainer.h"
+#include "xAODMuon/MuonAuxContainer.h"
 #include "xAODJet/JetContainer.h"
 #include "xAODJet/JetAuxContainer.h"
 
@@ -60,7 +64,9 @@ EL::StatusCode MyFirstxAODAnalysis :: histInitialize ()
   // connected.
 
   h_jetPt = new TH1F("h_jetPt", "h_jetPt", 100, 0, 500);
+  h_mJJ = new TH1F("h_mJJ", "h_mJJ;m_jj [GeV];Jet pairs", 100, 0, 200);
   wk()->addOutput(h_jetPt);
+  wk()->addOutput(h_mJJ);
 
   return EL::StatusCode::SUCCESS;
 }
@@ -153,6 +159,22 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
   }
   m_numCleanEvents++;
 
+  // Get input electron container
+  const xAOD::ElectronContainer* electrons = 0;
+  if(!m_event->retrieve(electrons, "ElectronCollection").isSuccess()){
+    Error("execute()", "Failed to retrieve ElectronCollection");
+    return EL::StatusCode::FAILURE;
+  }
+  Info("execute()", " number of elecs = %lu", electrons->size());
+
+  // Get input muon container
+  const xAOD::MuonContainer* muons = 0;
+  if(!m_event->retrieve(muons, "Muons").isSuccess()){
+    Error("execute()", "Failed to retrieve Muons");
+    return EL::StatusCode::FAILURE;
+  }
+  Info("execute()", " number of muons = %lu", muons->size());
+
   // Get input jet container
   const xAOD::JetContainer* jets = 0;
   if(!m_event->retrieve(jets, "AntiKt4LCTopoJets").isSuccess()){
@@ -161,7 +183,29 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
   }
   Info("execute()", " number of jets = %lu", jets->size());
 
-  // Create the output container and its aux store
+  // Count the number of good electrons
+  int numGoodEle = 0;
+  xAOD::ElectronContainer::const_iterator eleItr;
+  for(eleItr = electrons->begin(); eleItr != electrons->end(); ++eleItr){
+    // Select good electrons
+    if((*eleItr)->pt() < 20000.) continue;
+    if(fabs((*eleItr)->eta()) < 2.47) continue;
+    numGoodEle++;
+  }
+  Info("execute()", "numGoodEle = %i", numGoodEle);
+
+  // Count the number of good muons
+  int numGoodMu = 0;
+  xAOD::MuonContainer::const_iterator muItr;
+  for(muItr = muons->begin(); muItr != muons->end(); ++muItr){
+    // Select good muons
+    if((*muItr)->pt() < 20000.) continue;
+    if(fabs((*muItr)->eta()) < 2.47) continue;
+    numGoodMu++;
+  }
+  Info("execute()", "numGoodMu = %i", numGoodMu);
+
+  // Create the output jet container and its aux store
   xAOD::JetContainer* goodJets = new xAOD::JetContainer();
   xAOD::JetAuxContainer* goodJetsAux = new xAOD::JetAuxContainer();
   goodJets->setStore(goodJetsAux);
@@ -170,7 +214,10 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
   int numGoodJets = 0;
   xAOD::JetContainer::const_iterator jetItr;
   for(jetItr = jets->begin(); jetItr != jets->end(); ++jetItr){
+    // Select good jets
     if(!m_jetCleaning->accept(**jetItr)) continue;
+    if((*jetItr)->pt() < 20000.) continue;
+    if(fabs((*jetItr)->eta()) > 2.5) continue;
     numGoodJets++;
     Info("execute()", "  jet pt = %.2f GeV", (*jetItr)->pt() * 0.001);
 
@@ -182,8 +229,22 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
     jet->makePrivateStore(**jetItr);
     goodJets->push_back(jet);
   }
-
   Info("execute()", "numGoodJets = %i", numGoodJets);
+
+  // Select events for l+jets
+  if(numGoodEle + numGoodMu < 1) return EL::StatusCode::SUCCESS;
+  if(numGoodJets < 3) return EL::StatusCode::SUCCESS;
+
+  // Fill the dijet mass plot
+  xAOD::JetContainer::const_iterator jetItr2;
+  for(jetItr = goodJets->begin(); jetItr != goodJets->end(); ++jetItr){
+    for(jetItr2 = jetItr+1; jetItr2 != goodJets->end(); ++jetItr2){
+      // Calculate di-jet mass
+      float mJJ = ((*jetItr)->p4() + (*jetItr2)->p4()).M();
+      // Fill the histogram
+      h_mJJ->Fill(mJJ*.001);
+    }
+  }
 
   // Copy full jet container to output
   m_event->copy("AntiKt4LCTopoJets");
