@@ -15,6 +15,7 @@
 #include "xAODJet/JetContainer.h"
 #include "xAODJet/JetAuxContainer.h"
 
+const double GeV = 1000.;
 
 // this is needed to distribute the algorithm to the workers
 ClassImp(MyFirstxAODAnalysis)
@@ -22,6 +23,8 @@ ClassImp(MyFirstxAODAnalysis)
 
 
 MyFirstxAODAnalysis :: MyFirstxAODAnalysis ()
+    : lepPtMin(20.*GeV),
+      jetPtMin(20.*GeV)
 {
   // Here you put any code for the base initialization of variables,
   // e.g. initialize all pointers to 0.  Note that you should only put
@@ -108,12 +111,15 @@ EL::StatusCode MyFirstxAODAnalysis :: initialize ()
   // Initialize and configure jet tool
   m_jetCleaning = new JetCleaningTool("JetCleaning");
   m_jetCleaning->msg().setLevel(MSG::DEBUG);
-  m_jetCleaning->setProperty("CutLevel", "MediumBad");
-  m_jetCleaning->initialize();
+  if(m_jetCleaning->setProperty("CutLevel", "MediumBad").isFailure())
+    return EL::StatusCode::FAILURE;
+  if(m_jetCleaning->initialize().isFailure())
+    return EL::StatusCode::FAILURE;
 
   // Output xAOD
   TFile* file = wk()->getOutputFile("outputLabel");
-  m_event->writeTo(file);
+  if(m_event->writeTo(file).isFailure())
+    return EL::StatusCode::FAILURE;
 
   m_eventCounter = 0;
   m_numCleanEvents = 0;
@@ -188,7 +194,7 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
   xAOD::ElectronContainer::const_iterator eleItr;
   for(eleItr = electrons->begin(); eleItr != electrons->end(); ++eleItr){
     // Select good electrons
-    if((*eleItr)->pt() < 20000.) continue;
+    if((*eleItr)->pt() < lepPtMin) continue;
     if(fabs((*eleItr)->eta()) < 2.47) continue;
     numGoodEle++;
   }
@@ -199,7 +205,7 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
   xAOD::MuonContainer::const_iterator muItr;
   for(muItr = muons->begin(); muItr != muons->end(); ++muItr){
     // Select good muons
-    if((*muItr)->pt() < 20000.) continue;
+    if((*muItr)->pt() < lepPtMin) continue;
     if(fabs((*muItr)->eta()) < 2.47) continue;
     numGoodMu++;
   }
@@ -216,7 +222,7 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
   for(jetItr = jets->begin(); jetItr != jets->end(); ++jetItr){
     // Select good jets
     if(!m_jetCleaning->accept(**jetItr)) continue;
-    if((*jetItr)->pt() < 20000.) continue;
+    if((*jetItr)->pt() < jetPtMin) continue;
     if(fabs((*jetItr)->eta()) > 2.5) continue;
     numGoodJets++;
     Info("execute()", "  jet pt = %.2f GeV", (*jetItr)->pt() * 0.001);
@@ -247,7 +253,8 @@ EL::StatusCode MyFirstxAODAnalysis :: execute ()
   }
 
   // Copy full jet container to output
-  m_event->copy("AntiKt4LCTopoJets");
+  if(m_event->copy("AntiKt4LCTopoJets").isFailure())
+    return EL::StatusCode::FAILURE;
 
   // Record the good jets into the output
   if(!m_event->record(goodJets, "GoodJets")){
@@ -287,14 +294,12 @@ EL::StatusCode MyFirstxAODAnalysis :: finalize ()
   // merged.  This is different from histFinalize() in that it only
   // gets called on worker nodes that processed input events.
 
-  if(m_jetCleaning){
-    delete m_jetCleaning;
-    m_jetCleaning = 0;
-  }
+  if(m_jetCleaning) delete m_jetCleaning;
 
   // Finalize and close our output xAOD file
   TFile* file = wk()->getOutputFile("outputLabel");
-  m_event->finishWritingTo(file);
+  if(m_event->finishWritingTo(file).isFailure())
+    return EL::StatusCode::FAILURE;
 
   Info("finalize()", "Number of clean events = %i", m_numCleanEvents);
 

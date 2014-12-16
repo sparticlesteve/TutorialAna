@@ -14,50 +14,43 @@ class JetCleaningTool;
 class MyFirstxAODAnalysis : public EL::Algorithm
 {
 
-public:
-  // put your configuration variables here as public variables.
-  // that way they can be set directly from CINT and python.
+  public:
 
-  // float cutValue;
+    // Standard constructor
+    MyFirstxAODAnalysis();
 
-public:
-  // variables that don't get filled at submission time should be
-  // protected from being send from the submission node to the worker
-  // node (done by the //!)
+    // Algorithm methods
+    virtual EL::StatusCode setupJob(EL::Job& job);
+    virtual EL::StatusCode fileExecute();
+    virtual EL::StatusCode histInitialize();
+    virtual EL::StatusCode changeInput(bool firstFile);
+    virtual EL::StatusCode initialize();
+    virtual EL::StatusCode execute();
+    virtual EL::StatusCode postExecute();
+    virtual EL::StatusCode finalize();
+    virtual EL::StatusCode histFinalize();
 
-  // Tree *myTree; //!
-  // TH1 *myHist; //!
 
-protected:
-  xAOD::TEvent* m_event; //!
+    // Public configuration variables
+    float lepPtMin;
+    float jetPtMin;
 
-  #ifndef __CINT__
-  JetCleaningTool* m_jetCleaning; //!
-  #endif
+    ClassDef(MyFirstxAODAnalysis, 1);
 
-  int m_eventCounter; //!
-  int m_numCleanEvents; //!
+  protected:
 
-  TH1* h_jetPt; //!
-  TH1* h_mJJ; //!
+    xAOD::TEvent* m_event; //!
 
-public:
-  // this is a standard constructor
-  MyFirstxAODAnalysis ();
+    #ifndef __CINT__
+    JetCleaningTool* m_jetCleaning; //!
+    #endif
 
-  // these are the functions inherited from Algorithm
-  virtual EL::StatusCode setupJob (EL::Job& job);
-  virtual EL::StatusCode fileExecute ();
-  virtual EL::StatusCode histInitialize ();
-  virtual EL::StatusCode changeInput (bool firstFile);
-  virtual EL::StatusCode initialize ();
-  virtual EL::StatusCode execute ();
-  virtual EL::StatusCode postExecute ();
-  virtual EL::StatusCode finalize ();
-  virtual EL::StatusCode histFinalize ();
+    int m_eventCounter; //!
+    int m_numCleanEvents; //!
 
-  // this is needed to distribute the algorithm to the workers
-  ClassDef(MyFirstxAODAnalysis, 1);
+    TH1* h_jetPt; //!
+    TH1* h_mJJ; //!
+
 };
 
 #endif
