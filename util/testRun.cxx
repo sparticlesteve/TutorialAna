@@ -1,4 +1,5 @@
 #include "xAODRootAccess/Init.h"
+#include "AsgTools/StatusCode.h"
 #include "SampleHandler/SampleHandler.h"
 #include "SampleHandler/DiskListLocal.h"
 #include "SampleHandler/ToolsDiscovery.h"
@@ -15,29 +16,26 @@ int main(int argc, char* argv[])
 
   // Setup the job for xAOD access
   xAOD::Init().ignore();
+  StatusCode::enableFailure();
 
   // Create a new sample handler to describe the data files we use
   SH::SampleHandler sh;
 
   // Scan for datasets in the given directory on lxplus
-  //SH::scanDir (sh, "/afs/cern.ch/atlas/project/PAT/xAODs/r5534/");
-  // or for data
-  //SH::scanDir (sh, "/afs/cern.ch/atlas/project/PAT/xAODs/24.04.2014/");
-  // Set input file path on PDSF
-  SH::DiskListLocal list("/eliza18/atlas/atlasdata/atlaslocalgroupdisk/rucio/valid2/4c/15/");
-  SH::scanFiles(sh, list);
+  SH::DiskListLocal list("/afs/cern.ch/atlas/project/PAT/xAODs/r5591/mc14_8TeV.117050.PowhegPythia_P2011C_ttbar.recon.AOD.e1727_s1933_s1911_r5591/");
+  SH::scanSingleDir(sh, "ttbar", list);
 
   // Set the name of the tree in our files
-  sh.setMetaString ("nc_tree", "CollectionTree");
+  sh.setMetaString("nc_tree", "CollectionTree");
 
   // Further sample handler configuration may go here
 
   // Print out the samples we found
-  sh.print ();
+  sh.print();
 
   // The basic description of our job
   EL::Job job;
-  job.sampleHandler (sh);
+  job.sampleHandler(sh);
 
   // Instantiate our algorithm
   MyFirstxAODAnalysis* alg = new MyFirstxAODAnalysis;
